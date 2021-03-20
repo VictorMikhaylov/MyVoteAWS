@@ -9,7 +9,7 @@ rf = __import__("result-frontend")
 app = App()
 env = Environment(region="eu-central-1", account="685178144596")
 tags = {
-  "Project":"slurm-student-voting-app",
+    "Project": "slurm-student-voting-app",
 }
 
 vf_stack = vf.VotingFrontendStack(app, "voting-app-voting-bucket", env=env, tags=tags)
