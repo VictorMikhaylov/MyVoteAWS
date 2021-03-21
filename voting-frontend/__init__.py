@@ -1,4 +1,4 @@
-from aws_cdk.core import Stack, Construct, Tags
+from aws_cdk.core import Stack, Construct
 from aws_cdk.aws_s3 import Bucket
 
 
