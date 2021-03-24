@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
-import dynamodb
 from aws_cdk.core import App, Environment, Stack, Construct
 from aws_cdk.aws_dynamodb import Table, Attribute, AttributeType, BillingMode
 from aws_cdk.aws_s3 import Bucket
+from aws_cdk.aws_lambda import Function, Code, Runtime
 
 app = App()
 env = Environment(region="eu-central-1", account="685178144596")
@@ -11,20 +11,21 @@ tags = {
     "Project": "slurm-student-voting-app",
 }
 
+
 class VotingStorageStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        votes_table = Table(self, 
-            id = "Votes",
-            partition_key=Attribute(
-                name="voter",
-                type=AttributeType.STRING
-            ),
+        votes_table = Table(
+            self,
+            id="Votes",
+            table_name="Votes",
+            partition_key=Attribute(name="voter", type=AttributeType.STRING),
             billing_mode=BillingMode.PAY_PER_REQUEST,
         )
 
-class VotingFrontendStack(Stack):
+
+class VotingVoteStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
@@ -35,10 +36,18 @@ class VotingFrontendStack(Stack):
             website_index_document="index.html",
         )
 
-class ResultFrontendStack(Stack):
+
+class VotingResultStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
+        handler = Function(
+            self,
+            id="UrlShortenerFunction",
+            code=Code.asset("./result-backend"),
+            handler="results.handler",
+            runtime=Runtime.PYTHON_3_7,
+        )
         bucket = Bucket(
             self,
             id="result-frontend-bkt",
@@ -46,8 +55,9 @@ class ResultFrontendStack(Stack):
             website_index_document="index.html",
         )
 
-vf_stack = VotingFrontendStack(app, "voting-app-voting-bucket", env=env, tags=tags)
-rf_stack = ResultFrontendStack(app, "voting-app-result-bucket", env=env, tags=tags)
-dynamo_storage = VotingStorageStack(app, "voting-storage", env=env, tags=tags)
+
+VotingStorageStack(app, "voting-app-storage-stack", env=env, tags=tags)
+VotingResultStack(app, "voting-app-result-stack", env=env, tags=tags)
+VotingVoteStack(app, "voting-app-voting-stack", env=env, tags=tags)
 
 app.synth()
