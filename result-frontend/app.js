@@ -14,7 +14,7 @@ function animateStats (a,b){
 }
 
 function updateScores (){
-    $.get("https://kmti6g8um6.execute-api.eu-central-1.amazonaws.com/my-vote", null, function(result,status){
+    $.get("https://plnco1ciib.execute-api.eu-central-1.amazonaws.com/prod/my-vote", null, function(result,status){
         if ("success" == status) {
             console.log(result);
 
