@@ -1,9 +1,18 @@
 #!/usr/bin/env python3
 
+import aws_cdk.aws_dynamodb as dynamodb
 from aws_cdk.core import App, Environment, Stack, Construct
 from aws_cdk.aws_dynamodb import Table, Attribute, AttributeType, BillingMode
 from aws_cdk.aws_s3 import Bucket
 from aws_cdk.aws_lambda import Function, Code, Runtime
+from aws_cdk.aws_apigateway import (
+    RestApi,
+    MockIntegration,
+    PassthroughBehavior,
+    LambdaIntegration,
+)
+
+STORAGE_ID = "Votes"
 
 app = App()
 env = Environment(region="eu-central-1", account="685178144596")
@@ -16,10 +25,9 @@ class VotingStorageStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        votes_table = Table(
-            self,
-            id="Votes",
-            table_name="Votes",
+        Table(self,
+            id=STORAGE_ID,
+            table_name=STORAGE_ID,
             partition_key=Attribute(name="voter", type=AttributeType.STRING),
             billing_mode=BillingMode.PAY_PER_REQUEST,
         )
@@ -29,9 +37,9 @@ class VotingVoteStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        bucket = Bucket(
-            self,
-            id="voting-frontend-bkt",
+        bucket = Bucket(self,
+            id="voting-frontend",
+            bucket_name="voting-frontend-bkt",
             public_read_access=True,
             website_index_document="index.html",
         )
@@ -41,23 +49,32 @@ class VotingResultStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        handler = Function(
-            self,
-            id="UrlShortenerFunction",
-            code=Code.asset("./result-backend"),
-            handler="results.handler",
-            runtime=Runtime.PYTHON_3_7,
-        )
-        bucket = Bucket(
-            self,
-            id="result-frontend-bkt",
+        bucket = Bucket(self,
+            id="result-frontend",
+            bucket_name="result-frontend-bkt",
             public_read_access=True,
             website_index_document="index.html",
         )
 
+        handler = Function(self,
+            id="result-backend",
+            function_name="result-backend-function",
+            code=Code.asset("./result-backend"),
+            handler="results.lambda_handler",
+            runtime=Runtime.PYTHON_3_8,
+        )
+
+        dbtable = dynamodb.Table.from_table_name(self, STORAGE_ID, table_name=STORAGE_ID)
+        dbtable.grant_read_data(handler)
+
+        rest_gw = RestApi(
+            self, id="result-gateway", rest_api_name="result-gateway-api",
+        )
+        gw_resource = rest_gw.root.add_resource("my-vote")
+        gw_resource.add_method("GET", LambdaIntegration(handler))
 
 VotingStorageStack(app, "voting-app-storage-stack", env=env, tags=tags)
 VotingResultStack(app, "voting-app-result-stack", env=env, tags=tags)
-VotingVoteStack(app, "voting-app-voting-stack", env=env, tags=tags)
+# VotingVoteStack(app, "voting-app-voting-stack", env=env, tags=tags)
 
 app.synth()

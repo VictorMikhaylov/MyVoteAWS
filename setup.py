@@ -15,9 +15,10 @@ setuptools.setup(
     # package_dir={"": "voting_deploy"},
     # packages=setuptools.find_packages(where="voting_deploy"),
     install_requires=[
-        "aws-cdk.core==1.89.0",
-        "aws-cdk.aws-dynamodb==1.89.0",
-        "aws-cdk.aws-lambda==1.89.0",
+        "aws-cdk.core==1.95.1",
+        "aws-cdk.aws-dynamodb==1.95.1",
+        "aws-cdk.aws-lambda==1.95.1",
+        "aws-cdk.aws-apigateway==1.95.1",
         "boto3",
         "requests",
     ],
