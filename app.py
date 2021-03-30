@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 
 import aws_cdk.aws_dynamodb as dynamodb
-from aws_cdk.core import App, Environment, Stack, Construct
+from aws_cdk.core import App, Environment, Stack, Construct, Duration
 from aws_cdk.aws_dynamodb import Table, Attribute, AttributeType, BillingMode
-from aws_cdk.aws_s3 import Bucket, HttpMethods
+from aws_cdk.aws_s3 import Bucket
 from aws_cdk.aws_lambda import Function, Code, Runtime
-from aws_cdk.aws_apigateway import RestApi, LambdaIntegration, Cors
+from aws_cdk.aws_apigatewayv2 import HttpApi, HttpMethod, CorsHttpMethod
+from aws_cdk.aws_apigatewayv2_integrations import LambdaProxyIntegration
 
 STORAGE_ID = "Votes"
 
@@ -68,39 +69,19 @@ class VotingResultStack(Stack):
         )
         dbtable.grant_read_data(handler)
 
-        rest_gw = RestApi(
+        result_gateway = HttpApi(
             self,
-            id="result-gateway",
-            rest_api_name="result-gateway-api",
-            default_cors_preflight_options={
-                "allow_origins": Cors.ALL_ORIGINS,
-                "allow_methods": Cors.ALL_METHODS,
+            "result-gateway",
+            cors_preflight={
+                "allow_headers": ["Accept", "Content-Type"],
+                "allow_methods": [CorsHttpMethod.GET],
+                "allow_origins": [f"{bucket.bucket_website_url}"],
             },
         )
-        gw_resource = rest_gw.root.add_resource("my-vote")
-        gw_resource_lambda_integration = LambdaIntegration(
-            handler,
-            proxy=True,
-            integration_responses=[
-                {
-                    "statusCode": "200",
-                    "responseParameters": {
-                        "method.response.header.Access-Control-Allow-Origin": "'*'",
-                    },
-                }
-            ],
-        )
-        gw_resource.add_method(
-            "GET",
-            gw_resource_lambda_integration,
-            method_responses=[
-                {
-                    "statusCode": "200",
-                    "responseParameters": {
-                        "method.response.header.Access-Control-Allow-Origin": True,
-                    },
-                }
-            ],
+        result_gateway.add_routes(
+            path="/my-vote",
+            methods=[HttpMethod.GET],
+            integration=LambdaProxyIntegration(handler=handler),
         )
 
 
