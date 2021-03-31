@@ -25,7 +25,7 @@ def lambda_handler(event, context):
 def publish_vote(vote, voter):
     sns = boto3.client("sns", region_name="eu-central-1")
     sns.publish(
-        TopicArn="arn:aws:sns:eu-central-1:971702022395:my-vote",
+        TopicArn="arn:aws:sns:eu-central-1:685178144596:my-vote",
         Message='""',
         MessageAttributes={
             "vote": {

@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 
 import aws_cdk.aws_dynamodb as dynamodb
-from aws_cdk.core import App, Environment, Stack, Construct, Duration
+from aws_cdk.core import App, Environment, Stack, Construct
 from aws_cdk.aws_dynamodb import Table, Attribute, AttributeType, BillingMode
-from aws_cdk.aws_s3 import Bucket
+from aws_cdk.aws_sns import Topic
 from aws_cdk.aws_lambda import Function, Code, Runtime
+from aws_cdk.aws_lambda_destinations import SnsDestination
+from aws_cdk.aws_s3 import Bucket
 from aws_cdk.aws_apigatewayv2 import HttpApi, HttpMethod, CorsHttpMethod
 from aws_cdk.aws_apigatewayv2_integrations import LambdaProxyIntegration
 
@@ -17,7 +19,7 @@ tags = {
 }
 
 
-class VotingStorageStack(Stack):
+class StorageStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
@@ -30,9 +32,26 @@ class VotingStorageStack(Stack):
         )
 
 
-class VotingVoteStack(Stack):
+class VoteStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
+
+        topic = Topic(
+            self,
+            "my-vote",
+            topic_name="my-vote",
+            display_name="voting-keeper",
+        )
+
+        handler = Function(
+            self,
+            id="voting-backend",
+            function_name="voting-backend-fun",
+            code=Code.asset("./voting-backend"),
+            handler="voting.lambda_handler",
+            runtime=Runtime.PYTHON_3_8,
+            on_success=SnsDestination(topic)
+        )
 
         bucket = Bucket(
             self,
@@ -42,8 +61,23 @@ class VotingVoteStack(Stack):
             website_index_document="index.html",
         )
 
+        api_gateway = HttpApi(
+            self,
+            "voting-gateway",
+            cors_preflight={
+                "allow_headers": ["Accept", "Content-Type"],
+                "allow_methods": [CorsHttpMethod.POST],
+                "allow_origins": [f"{bucket.bucket_website_url}"],
+            },
+        )
+        api_gateway.add_routes(
+            path="/my-vote",
+            methods=[HttpMethod.POST],
+            integration=LambdaProxyIntegration(handler=handler),
+        )
 
-class VotingResultStack(Stack):
+
+class ResultStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
@@ -58,7 +92,7 @@ class VotingResultStack(Stack):
         handler = Function(
             self,
             id="result-backend",
-            function_name="result-backend-function",
+            function_name="result-backend-fun",
             code=Code.asset("./result-backend"),
             handler="results.lambda_handler",
             runtime=Runtime.PYTHON_3_8,
@@ -69,7 +103,7 @@ class VotingResultStack(Stack):
         )
         dbtable.grant_read_data(handler)
 
-        result_gateway = HttpApi(
+        api_gateway = HttpApi(
             self,
             "result-gateway",
             cors_preflight={
@@ -78,15 +112,15 @@ class VotingResultStack(Stack):
                 "allow_origins": [f"{bucket.bucket_website_url}"],
             },
         )
-        result_gateway.add_routes(
+        api_gateway.add_routes(
             path="/my-vote",
             methods=[HttpMethod.GET],
             integration=LambdaProxyIntegration(handler=handler),
         )
 
 
-VotingStorageStack(app, "voting-app-storage-stack", env=env, tags=tags)
-VotingResultStack(app, "voting-app-result-stack", env=env, tags=tags)
-# VotingVoteStack(app, "voting-app-voting-stack", env=env, tags=tags)
+StorageStack(app, "voting-app-storage-stack", env=env, tags=tags)
+ResultStack(app, "voting-app-result-stack", env=env, tags=tags)
+VoteStack(app, "voting-app-voting-stack", env=env, tags=tags)
 
 app.synth()
