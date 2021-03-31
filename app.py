@@ -50,7 +50,7 @@ class VoteStack(Stack):
             code=Code.asset("./voting-backend"),
             handler="voting.lambda_handler",
             runtime=Runtime.PYTHON_3_8,
-            on_success=SnsDestination(topic)
+            on_success=SnsDestination(topic),
         )
 
         bucket = Bucket(
