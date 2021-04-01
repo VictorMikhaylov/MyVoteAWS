@@ -1,7 +1,7 @@
-import json
-import sys
-import logging
 import boto3
+import json
+import logging
+import sys
 
 logging.getLogger().setLevel(logging.DEBUG)
 
@@ -29,12 +29,12 @@ def publish_vote(vote, voter):
         Message='""',
         MessageAttributes={
             "vote": {
-                "DataType": "String",
-                "StringValue": vote,
+                "dataType": "String",
+                "stringValue": vote,
             },
             "voter": {
-                "DataType": "String",
-                "StringValue": voter,
+                "dataType": "String",
+                "stringValue": voter,
             },
         },
     )

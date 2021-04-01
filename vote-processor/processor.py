@@ -1,31 +1,26 @@
 #!/usr/bin/env python
 
 import boto3
-import json
 import logging
-import exceptions
-import sys
 
-logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+logging.getLogger().setLevel(logging.DEBUG)
 
-queue = boto3.resource("sqs", region_name="eu-central-1").get_queue_by_name(
-    QueueName="my-vote"
-)
+# Get the service resource
 table = boto3.resource("dynamodb", region_name="eu-central-1").Table("Votes")
 
 
-def process_message(message):
-    try:
-        payload = json.loads(message.body)
-        voter = payload["MessageAttributes"]["voter"]["Value"]
-        vote = payload["MessageAttributes"]["vote"]["Value"]
-        logging.info("Voter: %s, Vote: %s", voter, vote)
-        store_vote(voter, vote)
-        update_count(vote)
-        message.delete()
-    except Exception as e:
-        logging.error("Failed to process message")
-        logging.error(str(e))
+def lambda_handler(event, context):
+    for message in event["Records"]:
+        logging.info(message["messageAttributes"])
+        process_message(message["messageAttributes"])
+
+
+def process_message(payload):
+    voter = payload["voter"]["stringValue"]
+    vote = payload["vote"]["stringValue"]
+    logging.info("Voter: %s, Vote: %s", voter, vote)
+    store_vote(voter, vote)
+    update_count(vote)
 
 
 def store_vote(voter, vote):
@@ -43,17 +38,3 @@ def update_count(vote):
         ExpressionAttributeNames={"#vote": vote},
         ExpressionAttributeValues={":incr": 1},
     )
-
-
-if __name__ == "__main__":
-    while True:
-        try:
-            messages = queue.receive_messages()
-        except exceptions.KeyboardInterrupt:
-            logging.info("Stopping...")
-            break
-        except:
-            logging.error(sys.exc_info()[0])
-            continue
-        for message in messages:
-            process_message(message)
