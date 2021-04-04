@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 
 import boto3
+import json
 import logging
 
-logging.getLogger().setLevel(logging.DEBUG)
+logging.getLogger().setLevel(logging.INFO)
 
 # Get the service resource
 table = boto3.resource("dynamodb", region_name="eu-central-1").Table("Votes")
@@ -11,13 +12,16 @@ table = boto3.resource("dynamodb", region_name="eu-central-1").Table("Votes")
 
 def lambda_handler(event, context):
     for message in event["Records"]:
-        logging.info(message["messageAttributes"])
-        process_message(message["messageAttributes"])
+        logging.info("Body: %s", message["body"])
+        body = json.loads(message["body"])
+        logging.info("Payload: %s", body["Message"])
+        payload = json.loads(body["Message"])
+        process_message(payload)
 
 
 def process_message(payload):
-    voter = payload["voter"]["stringValue"]
-    vote = payload["vote"]["stringValue"]
+    voter = payload["voter"]
+    vote = payload["vote"]
     logging.info("Voter: %s, Vote: %s", voter, vote)
     store_vote(voter, vote)
     update_count(vote)

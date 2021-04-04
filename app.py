@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import aws_cdk.aws_dynamodb as dynamodb
-from aws_cdk.aws_sns_subscriptions import SqsSubscription
+from aws_cdk.aws_sns_subscriptions import EmailSubscription, SqsSubscription
 from aws_cdk.core import App, Environment, Stack, Construct
 from aws_cdk.aws_dynamodb import Table, Attribute, AttributeType, BillingMode
 from aws_cdk.aws_sns import Topic
@@ -65,13 +65,15 @@ class VoteStack(Stack):
             topic_name="my-vote",
             display_name="voting-keeper",
         )
-        
         processor_queue = Queue.from_queue_attributes(
             self,
             SQS_QUEUE_ID,
             queue_arn=f"arn:aws:sqs:{ENV_REGION}:{ENV_ACCAUNT}:{SQS_QUEUE_ID}",
         )
         topic.add_subscription(SqsSubscription(processor_queue))
+        topic.add_subscription(
+            EmailSubscription(email_address="victor.v.mikhaylov@gmail.com", json=True)
+        )
 
         handler = Function(
             self,

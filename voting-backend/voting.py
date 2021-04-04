@@ -3,17 +3,20 @@ import json
 import logging
 import sys
 
-logging.getLogger().setLevel(logging.DEBUG)
+logging.getLogger().setLevel(logging.INFO)
 
 
 def lambda_handler(event, context):
     vote = json.loads(event["body"])["vote"]
-    voter = "default_voter"
+    batch = {
+        "voter": "default_voter",
+        "vote": vote,
+    }
 
-    logging.info("Vote: %s, Voter: %s", vote, voter)
+    logging.info("Vote: %s", batch)
 
     try:
-        publish_vote(vote, voter)
+        publish_vote(batch)
     except:
         e = sys.exc_info()[0]
         logging.error(e)
@@ -22,20 +25,10 @@ def lambda_handler(event, context):
     return {"statusCode": 200, "body": '{"status": "success"}'}
 
 
-def publish_vote(vote, voter):
+def publish_vote(batch):
     sns = boto3.client("sns", region_name="eu-central-1")
     sns.publish(
         TopicArn="arn:aws:sns:eu-central-1:685178144596:my-vote",
-        Message='""',
-        MessageAttributes={
-            "vote": {
-                "dataType": "String",
-                "stringValue": vote,
-            },
-            "voter": {
-                "dataType": "String",
-                "stringValue": voter,
-            },
-        },
+        Message=json.dumps(batch),
     )
     logging.info("message published")
