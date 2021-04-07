@@ -15,6 +15,9 @@ setuptools.setup(
     author="Victor Mikhaylov <victor.v.mikhayloc@gmail.com>",
     install_requires=[
         "aws-cdk.core==1.96.0",
+        "aws-cdk.aws-s3==1.96.0",
+        "aws-cdk.aws-cloudfront==1.96.0",
+        "aws-cdk.aws-cloudfront-origins==1.96.0",
         "aws-cdk.aws-dynamodb==1.96.0",
         "aws-cdk.aws-sns==1.96.0",
         "aws-cdk.aws-sqs==1.96.0",
